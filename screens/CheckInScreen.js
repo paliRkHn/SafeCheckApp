@@ -21,6 +21,9 @@ export default function CheckInScreen({ navigation }) {
   const [photo, setPhoto] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [showCamera, setShowCamera] = useState(false);
+  const cameraRef = useRef(null);
 
   useEffect(() => {
     getCurrentLocation();
@@ -81,9 +84,15 @@ export default function CheckInScreen({ navigation }) {
     }
   };
 
-  const [permission, requestPermission] = useCameraPermissions();
-  const [showCamera, setShowCamera] = useState(false);
-  const cameraRef = useRef(null);
+ 
+
+  const takePhoto = () => {
+    if (!permission?.granted) {
+      requestPermission();
+      return;
+    }
+    setShowCamera(true);
+  };
 
   const takePicture = async () => {
     if (!permission?.granted) {
@@ -104,17 +113,11 @@ export default function CheckInScreen({ navigation }) {
     }
   };
 
-  const takePhoto = () => {
-    if (!permission?.granted) {
-      requestPermission();
-      return;
-    }
-    setShowCamera(true);
-  };
 
   useEffect(() => {
     requestPermission();
   }, []);
+  if (!permission?.granted) return null;
 
   const handleSubmit = () => {
     if (!status.trim()) {
