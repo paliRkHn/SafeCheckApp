@@ -28,14 +28,14 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.feature}>🚨 Emergency alerts</Text>
           <Text style={styles.feature}>✅ Quick status updates</Text>
         </View>
-      </View>
 
-      <TouchableOpacity 
-        style={styles.checkInButton}
-        onPress={() => navigation.navigate('CheckIn')}
-      >
-        <Text style={styles.checkInButtonText}>Start Check-In</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.checkInButton}
+          onPress={() => navigation.navigate('CheckIn')}
+        >
+          <Text style={styles.checkInButtonText}>Start Check-In</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: 120,
     marginBottom: 30,
   },
   logo: {
@@ -69,14 +69,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 20,
   },
   welcomeText: {
     fontSize: 24,
     fontWeight: '600',
     color: '#2c3e50',
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: 25,
   },
   description: {
     fontSize: 16,
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 40,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,

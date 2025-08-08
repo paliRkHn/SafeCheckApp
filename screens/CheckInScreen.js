@@ -8,7 +8,8 @@ import {
   ScrollView,
   Alert,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  TouchableWithoutFeedback
 } from 'react-native';
 import * as Location from 'expo-location';
 
@@ -18,6 +19,7 @@ export default function CheckInScreen({ navigation }) {
   const [location, setLocation] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     getCurrentLocation();
@@ -103,41 +105,94 @@ export default function CheckInScreen({ navigation }) {
   };
 
   const statusOptions = [
-    { id: 'safe', label: 'Safe', emoji: '✅', color: '#27ae60' },
-    { id: 'help', label: 'Need Help', emoji: '🆘', color: '#e74c3c' },
-    { id: 'emergency', label: 'Emergency', emoji: '🚨', color: '#c0392b' },
-    { id: 'traveling', label: 'Traveling', emoji: '✈️', color: '#3498db' },
+    { id: 'safe', label: 'Safe', emoji: '✅', color: '#27ae60', description: 'I am safe and secure' },
+    { id: 'help', label: 'Needs Help', emoji: '🆘', color: '#e74c3c', description: 'I need assistance' },
+    { id: 'emergency', label: 'Emergency', emoji: '🚨', color: '#c0392b', description: 'This is an emergency' },
+    { id: 'in-transit', label: 'In Transit', emoji: '✈️', color: '#3498db', description: 'Currently traveling' },
+    { id: 'arrived', label: 'Arrived Safely', emoji: '🏁', color: '#9b59b6', description: 'Reached destination safely' },
   ];
 
+  const getSelectedStatus = () => {
+    return statusOptions.find(option => option.id === status);
+  };
+
+  const handleStatusSelect = (selectedStatus) => {
+    setStatus(selectedStatus.id);
+    setDropdownOpen(false);
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Safety Check-In</Text>
-        <Text style={styles.subtitle}>Let others know you're safe</Text>
-      </View>
+    <TouchableWithoutFeedback onPress={() => dropdownOpen && setDropdownOpen(false)}>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Safety Check-In</Text>
+          <Text style={styles.subtitle}>Let others know you're safe</Text>
+        </View>
 
       {/* Status Selection */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current Status</Text>
-        <View style={styles.statusGrid}>
-          {statusOptions.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              style={[
-                styles.statusOption,
-                status === option.id && { backgroundColor: option.color }
-              ]}
-              onPress={() => setStatus(option.id)}
-            >
-              <Text style={styles.statusEmoji}>{option.emoji}</Text>
-              <Text style={[
-                styles.statusLabel,
-                status === option.id && { color: '#ffffff' }
-              ]}>
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        
+        {/* Status Dropdown */}
+        <View style={styles.dropdownContainer}>
+          <TouchableOpacity 
+            style={[styles.dropdownButton, dropdownOpen && styles.dropdownButtonOpen]}
+            onPress={() => setDropdownOpen(!dropdownOpen)}
+          >
+            <View style={styles.dropdownButtonContent}>
+              {status ? (
+                <>
+                  <Text style={styles.selectedEmoji}>{getSelectedStatus()?.emoji}</Text>
+                  <View style={styles.selectedTextContainer}>
+                    <Text style={styles.selectedLabel}>{getSelectedStatus()?.label}</Text>
+                    <Text style={styles.selectedDescription}>{getSelectedStatus()?.description}</Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.placeholderContainer}>
+                  <Text style={styles.placeholderEmoji}>📋</Text>
+                  <Text style={styles.placeholderText}>Select your current status</Text>
+                </View>
+              )}
+              <Text style={[styles.dropdownArrow, dropdownOpen && styles.dropdownArrowOpen]}>▼</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Dropdown Options */}
+          {dropdownOpen && (
+            <View style={styles.dropdownList}>
+              {statusOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[
+                    styles.dropdownOption,
+                    index === statusOptions.length - 1 && styles.dropdownOptionLast,
+                    status === option.id && styles.dropdownOptionSelected
+                  ]}
+                  onPress={() => handleStatusSelect(option)}
+                >
+                  <Text style={styles.optionEmoji}>{option.emoji}</Text>
+                  <View style={styles.optionTextContainer}>
+                    <Text style={[
+                      styles.optionLabel,
+                      status === option.id && styles.optionLabelSelected
+                    ]}>
+                      {option.label}
+                    </Text>
+                    <Text style={[
+                      styles.optionDescription,
+                      status === option.id && styles.optionDescriptionSelected
+                    ]}>
+                      {option.description}
+                    </Text>
+                  </View>
+                  {status === option.id && (
+                    <Text style={styles.checkMark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </View>
 
@@ -219,7 +274,8 @@ export default function CheckInScreen({ navigation }) {
       </TouchableOpacity>
 
       <View style={styles.spacer} />
-    </ScrollView>
+      </ScrollView>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -276,6 +332,137 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#2c3e50',
+  },
+  // Status Dropdown Styles
+  dropdownContainer: {
+    position: 'relative',
+    zIndex: 1000,
+  },
+  dropdownButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#ecf0f1',
+    minHeight: 60,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  dropdownButtonOpen: {
+    borderColor: '#3498db',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  dropdownButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+  },
+  selectedEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  selectedTextContainer: {
+    flex: 1,
+  },
+  selectedLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  selectedDescription: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginTop: 2,
+  },
+  placeholderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  placeholderEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#95a5a6',
+    fontStyle: 'italic',
+  },
+  dropdownArrow: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    marginLeft: 10,
+    transform: [{ rotate: '0deg' }],
+  },
+  dropdownArrowOpen: {
+    transform: [{ rotate: '180deg' }],
+  },
+  dropdownList: {
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#3498db',
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    zIndex: 1001,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ecf0f1',
+  },
+  dropdownOptionLast: {
+    borderBottomWidth: 0,
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#e8f4fd',
+  },
+  optionEmoji: {
+    fontSize: 22,
+    marginRight: 12,
+  },
+  optionTextContainer: {
+    flex: 1,
+  },
+  optionLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  optionLabelSelected: {
+    color: '#3498db',
+    fontWeight: '600',
+  },
+  optionDescription: {
+    fontSize: 11,
+    color: '#7f8c8d',
+    marginTop: 1,
+  },
+  optionDescriptionSelected: {
+    color: '#5dade2',
+  },
+  checkMark: {
+    fontSize: 18,
+    color: '#3498db',
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
   locationCard: {
     backgroundColor: '#ffffff',
