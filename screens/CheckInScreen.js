@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -11,6 +11,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import * as Location from 'expo-location';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 
 export default function CheckInScreen({ navigation }) {
   const [status, setStatus] = useState('');
@@ -78,12 +79,40 @@ export default function CheckInScreen({ navigation }) {
     }
   };
 
-  const takePhoto = () => {
-    // Placeholder for camera functionality
-    // This will be implemented with expo-camera
-    Alert.alert('Camera', 'Camera functionality will be implemented');
-    setPhoto('placeholder-photo.jpg');
+  const [permission, requestPermission] = useCameraPermissions();
+  const [showCamera, setShowCamera] = useState(false);
+  const cameraRef = useRef(null);
+
+  const takePicture = async () => {
+    if (!permission?.granted) {
+      Alert.alert('Camera Permission', 'Please grant camera permission to take photos');
+      return;
+    }
+    
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync();
+        setPhoto(photo);
+        setShowCamera(false);
+        console.log(photo.uri);
+      } catch (error) {
+        console.error('Error taking picture:', error);
+        Alert.alert('Error', 'Failed to take picture. Please try again.');
+      }
+    }
   };
+
+  const takePhoto = () => {
+    if (!permission?.granted) {
+      requestPermission();
+      return;
+    }
+    setShowCamera(true);
+  };
+
+  useEffect(() => {
+    requestPermission();
+  }, []);
 
   const handleSubmit = () => {
     if (!status.trim()) {
@@ -188,6 +217,7 @@ export default function CheckInScreen({ navigation }) {
         <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
           {photo ? (
             <View style={styles.photoPreview}>
+              <Image source={{ uri: photo.uri }} style={styles.photoImage} />
               <Text style={styles.photoText}>📸 Photo captured</Text>
               <Text style={styles.photoSubtext}>Tap to retake</Text>
             </View>
@@ -199,6 +229,32 @@ export default function CheckInScreen({ navigation }) {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Camera Modal */}
+      {showCamera && (
+        <View style={styles.cameraContainer}>
+          <CameraView
+            ref={cameraRef}
+            style={styles.camera}
+            facing="back"
+          >
+            <View style={styles.cameraControls}>
+              <TouchableOpacity 
+                style={styles.cancelButton} 
+                onPress={() => setShowCamera(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.captureButton} 
+                onPress={takePicture}
+              >
+                <View style={styles.captureButtonInner} />
+              </TouchableOpacity>
+            </View>
+          </CameraView>
+        </View>
+      )}
 
       {/* Message Section */}
       <View style={styles.section}>
@@ -387,5 +443,60 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 20,
+  },
+  cameraContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000',
+    zIndex: 1000,
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraControls: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  cancelButton: {
+    padding: 10,
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  captureButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: '#ddd',
+  },
+  captureButtonInner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#000',
+  },
+  photoImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 10,
   },
 });
