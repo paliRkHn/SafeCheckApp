@@ -147,7 +147,27 @@ export default function CheckInScreen({ navigation }) {
       timestamp: new Date().toISOString(),
     };
 
-    navigation.navigate('Status', { checkInData });
+    // Get the selected status details for the confirmation
+    const selectedStatus = getSelectedStatus();
+    const statusEmoji = selectedStatus?.emoji || '❓';
+    const statusLabel = selectedStatus?.label || 'Unknown';
+
+    Alert.alert(
+      'Confirm Check-In',
+      `Are you sure you want to send a "${statusLabel}" check-in?\n\n${statusEmoji} Status: ${statusLabel}\n📍 Location: ${location?.address || 'Not available'}\n📸 Photo: ${photo ? 'Included' : 'None'}\n💬 Message: ${message ? 'Included' : 'None'}`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Send Check-In',
+          onPress: () => navigation.navigate('Status', { checkInData }),
+          style: 'default',
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   // Extract current dimensions
