@@ -7,27 +7,75 @@ import {
   TextInput,
   ScrollView,
   Alert,
-  Image
+  Image,
+  ActivityIndicator
 } from 'react-native';
+import * as Location from 'expo-location';
 
 export default function CheckInScreen({ navigation }) {
   const [status, setStatus] = useState('');
   const [message, setMessage] = useState('');
   const [location, setLocation] = useState(null);
   const [photo, setPhoto] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
     getCurrentLocation();
   }, []);
 
-  const getCurrentLocation = () => {
-    // Placeholder for location functionality
-    // This will be implemented with expo-location
-    setLocation({
-      latitude: 37.7749,
-      longitude: -122.4194,
-      address: 'San Francisco, CA'
-    });
+  const getCurrentLocation = async () => {
+    try {
+      setLocationLoading(true);
+      
+      // Request permission to access location
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied',
+          'Please enable location permissions to use this feature.',
+          [{ text: 'OK' }]
+        );
+        setLocationLoading(false);
+        return;
+      }
+
+      // Get current position
+      let currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      // Get address from coordinates (reverse geocoding)
+      let addressArray = await Location.reverseGeocodeAsync({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      });
+
+      let address = 'Unknown location';
+      if (addressArray.length > 0) {
+        const addr = addressArray[0];
+        address = `${addr.street || ''} ${addr.name || ''}, ${addr.city || ''}, ${addr.region || ''}, ${addr.country || ''}`.trim();
+        // Clean up the address (remove extra commas and spaces)
+        address = address.replace(/,\s*,/g, ',').replace(/^,\s*/, '').replace(/,\s*$/, '');
+      }
+
+      setLocation({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+        address: address,
+        accuracy: currentLocation.coords.accuracy,
+        timestamp: new Date().toISOString(),
+      });
+
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert(
+        'Location Error',
+        'Unable to get your current location. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLocationLoading(false);
+    }
   };
 
   const takePhoto = () => {
@@ -99,22 +147,37 @@ export default function CheckInScreen({ navigation }) {
         <View style={styles.locationCard}>
           <Text style={styles.locationEmoji}>📍</Text>
           <View style={styles.locationInfo}>
-            {location ? (
+            {locationLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#3498db" />
+                <Text style={styles.locationText}>Getting your location...</Text>
+              </View>
+            ) : location ? (
               <>
                 <Text style={styles.locationText}>{location.address}</Text>
                 <Text style={styles.locationCoords}>
                   {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
                 </Text>
+                {location.accuracy && (
+                  <Text style={styles.locationAccuracy}>
+                    Accuracy: ±{Math.round(location.accuracy)}m
+                  </Text>
+                )}
               </>
             ) : (
-              <Text style={styles.locationText}>Getting location...</Text>
+              <Text style={styles.locationText}>Location not available</Text>
             )}
           </View>
           <TouchableOpacity 
-            style={styles.refreshButton}
+            style={[styles.refreshButton, locationLoading && styles.refreshButtonDisabled]}
             onPress={getCurrentLocation}
+            disabled={locationLoading}
           >
-            <Text style={styles.refreshButtonText}>🔄</Text>
+            {locationLoading ? (
+              <ActivityIndicator size="small" color="#7f8c8d" />
+            ) : (
+              <Text style={styles.refreshButtonText}>🔄</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -246,8 +309,20 @@ const styles = StyleSheet.create({
   refreshButton: {
     padding: 5,
   },
+  refreshButtonDisabled: {
+    opacity: 0.5,
+  },
   refreshButtonText: {
     fontSize: 18,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationAccuracy: {
+    fontSize: 10,
+    color: '#95a5a6',
+    marginTop: 2,
   },
   photoButton: {
     backgroundColor: '#ffffff',
