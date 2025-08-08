@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 
 export default function HomeScreen({ navigation }) {
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
         <Image 
           source={require('../assets/icon.png')} 
@@ -36,7 +36,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.checkInButtonText}>Start Check-In</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -44,7 +44,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  scrollContent: {
     padding: 20,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
@@ -68,7 +71,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   content: {
-    flex: 1,
     justifyContent: 'flex-start',
     paddingTop: 20,
   },
