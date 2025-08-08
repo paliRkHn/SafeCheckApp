@@ -9,12 +9,17 @@ import {
   Alert,
   Image,
   ActivityIndicator,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Dimensions,
+  StatusBar,
+  Platform
 } from 'react-native';
 import * as Location from 'expo-location';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
 export default function CheckInScreen({ navigation }) {
+  // State for screen dimensions (will update on orientation change)
+  const [screenData, setScreenData] = useState(Dimensions.get('window'));
   const [status, setStatus] = useState('');
   const [message, setMessage] = useState('');
   const [location, setLocation] = useState(null);
@@ -24,6 +29,15 @@ export default function CheckInScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [showCamera, setShowCamera] = useState(false);
   const cameraRef = useRef(null);
+
+  // Listen for orientation changes
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenData(window);
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   useEffect(() => {
     getCurrentLocation();
@@ -135,6 +149,13 @@ export default function CheckInScreen({ navigation }) {
 
     navigation.navigate('Status', { checkInData });
   };
+
+  // Extract current dimensions
+  const { width: screenWidth, height: screenHeight } = screenData;
+  const statusBarHeight = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 24;
+  
+  // Create dynamic styles
+  const styles = createStyles(screenWidth, screenHeight, statusBarHeight);
 
   const statusOptions = [
     { id: 'safe', label: 'Safe', emoji: '✅', color: '#27ae60', description: 'I am safe and secure' },
@@ -276,13 +297,16 @@ export default function CheckInScreen({ navigation }) {
           {photo ? (
             <View style={styles.photoPreview}>
               <Image source={{ uri: photo.uri }} style={styles.photoImage} />
-              <Text style={styles.photoText}>📸 Photo captured</Text>
-              <Text style={styles.photoSubtext}>Tap to retake</Text>
+              <View style={styles.photoOverlay}>
+                <Text style={styles.photoOverlayText}>📸 Photo captured</Text>
+                <Text style={styles.photoOverlaySubtext}>Tap to retake</Text>
+              </View>
             </View>
           ) : (
             <View style={styles.photoPlaceholder}>
               <Text style={styles.photoEmoji}>📷</Text>
               <Text style={styles.photoText}>Take Photo</Text>
+              <Text style={styles.photoHint}>Capture a photo for your check-in</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -296,6 +320,25 @@ export default function CheckInScreen({ navigation }) {
             style={styles.camera}
             facing="back"
           >
+            {/* Camera Header */}
+            <View style={styles.cameraHeader}>
+              <TouchableOpacity 
+                style={styles.closeButton} 
+                onPress={() => setShowCamera(false)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+              <Text style={styles.cameraTitle}>Take Photo</Text>
+              <View style={styles.headerSpacer} />
+            </View>
+
+            {/* Camera Guidelines */}
+            <View style={styles.cameraGuidelines}>
+              <View style={styles.guidelineHorizontal} />
+              <View style={styles.guidelineVertical} />
+            </View>
+
+            {/* Camera Controls */}
             <View style={styles.cameraControls}>
               <TouchableOpacity 
                 style={styles.cancelButton} 
@@ -303,12 +346,17 @@ export default function CheckInScreen({ navigation }) {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
+              
               <TouchableOpacity 
                 style={styles.captureButton} 
                 onPress={takePicture}
               >
-                <View style={styles.captureButtonInner} />
+                <View style={styles.captureButtonOuter}>
+                  <View style={styles.captureButtonInner} />
+                </View>
               </TouchableOpacity>
+
+              <View style={styles.controlsSpacer} />
             </View>
           </CameraView>
         </View>
@@ -338,7 +386,8 @@ export default function CheckInScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Function to create styles based on screen dimensions
+const createStyles = (screenWidth, screenHeight, statusBarHeight) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
@@ -576,33 +625,75 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#ecf0f1',
     borderStyle: 'dashed',
-    minHeight: 100,
+    minHeight: Math.max(screenHeight * 0.18, 140),
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   photoPlaceholder: {
     alignItems: 'center',
+    paddingVertical: Math.max(screenHeight * 0.025, 20),
+    paddingHorizontal: Math.max(screenWidth * 0.05, 16),
   },
   photoPreview: {
-    alignItems: 'center',
-    backgroundColor: '#e8f5e8',
+    position: 'relative',
     width: '100%',
-    borderRadius: 10,
-    padding: 20,
+    minHeight: Math.max(screenHeight * 0.25, 200),
   },
   photoEmoji: {
-    fontSize: 32,
-    marginBottom: 10,
+    fontSize: Math.max(Math.min(screenWidth * 0.12, 48), 32),
+    marginBottom: Math.max(screenHeight * 0.02, 15),
+    opacity: 0.7,
   },
   photoText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: Math.max(Math.min(screenWidth * 0.045, 18), 14),
+    fontWeight: '600',
     color: '#2c3e50',
+    marginBottom: 5,
+    textAlign: 'center',
   },
   photoSubtext: {
-    fontSize: 12,
+    fontSize: Math.max(Math.min(screenWidth * 0.035, 14), 11),
     color: '#7f8c8d',
-    marginTop: 5,
+    textAlign: 'center',
+    lineHeight: Math.max(Math.min(screenWidth * 0.05, 20), 16),
+  },
+  photoHint: {
+    fontSize: Math.max(Math.min(screenWidth * 0.032, 13), 10),
+    color: '#95a5a6',
+    marginTop: Math.max(screenHeight * 0.008, 5),
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  photoImage: {
+    width: '100%',
+    height: Math.max(screenHeight * 0.25, 200),
+    borderRadius: 8,
+  },
+  photoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingVertical: Math.max(screenHeight * 0.012, 10),
+    paddingHorizontal: Math.max(screenWidth * 0.04, 16),
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    alignItems: 'center',
+  },
+  photoOverlayText: {
+    color: '#ffffff',
+    fontSize: Math.max(Math.min(screenWidth * 0.04, 16), 12),
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  photoOverlaySubtext: {
+    color: '#ffffff',
+    fontSize: Math.max(Math.min(screenWidth * 0.03, 12), 10),
+    opacity: 0.9,
+    textAlign: 'center',
+    marginTop: 2,
   },
   messageInput: {
     backgroundColor: '#ffffff',
@@ -642,46 +733,133 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#000',
     zIndex: 1000,
+    width: screenWidth,
+    height: screenHeight,
   },
   camera: {
-    flex: 1,
+    width: screenWidth,
+    height: screenHeight,
   },
-  cameraControls: {
+  cameraHeader: {
     position: 'absolute',
-    bottom: 0,
+    top: statusBarHeight,
     left: 0,
     right: 0,
+    width: screenWidth,
+    height: screenHeight * 0.1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: screenWidth * 0.05,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    zIndex: 1002,
+  },
+  closeButton: {
+    width: screenWidth * 0.12,
+    height: screenWidth * 0.12,
+    borderRadius: screenWidth * 0.06,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: screenWidth * 0.05,
+    fontWeight: 'bold',
+  },
+  cameraTitle: {
+    color: '#fff',
+    fontSize: screenWidth * 0.045,
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
+  },
+  headerSpacer: {
+    width: screenWidth * 0.12,
+  },
+  cameraControls: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? screenHeight * 0.05 : screenHeight * 0.02,
+    left: 0,
+    right: 0,
+    width: screenWidth,
+    height: screenHeight * 0.15,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: screenWidth * 0.05,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 1002,
   },
   cancelButton: {
-    padding: 10,
+    paddingHorizontal: screenWidth * 0.05,
+    paddingVertical: screenHeight * 0.015,
+    borderRadius: screenWidth * 0.08,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    minWidth: screenWidth * 0.22,
+    alignItems: 'center',
   },
   cancelButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: screenWidth * 0.04,
     fontWeight: '600',
   },
   captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  captureButtonOuter: {
+    width: screenWidth * 0.2,
+    height: screenWidth * 0.2,
+    borderRadius: screenWidth * 0.1,
+    backgroundColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: '#ddd',
+    borderColor: '#fff',
   },
   captureButtonInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: screenWidth * 0.15,
+    height: screenWidth * 0.15,
+    borderRadius: screenWidth * 0.075,
     backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#000',
+  },
+  controlsSpacer: {
+    width: screenWidth * 0.22,
+  },
+  cameraGuidelines: {
+    position: 'absolute',
+    top: statusBarHeight + (screenHeight * 0.1),
+    left: 0,
+    right: 0,
+    bottom: screenHeight * 0.15 + (Platform.OS === 'ios' ? screenHeight * 0.05 : screenHeight * 0.02),
+    width: screenWidth,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
+    zIndex: 1001,
+  },
+  guidelineHorizontal: {
+    position: 'absolute',
+    left: screenWidth * 0.1,
+    right: screenWidth * 0.1,
+    width: screenWidth * 0.8,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    top: '33%',
+  },
+  guidelineVertical: {
+    position: 'absolute',
+    top: '10%',
+    bottom: '10%',
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    left: '50%',
+    marginLeft: -0.5,
   },
   photoImage: {
     width: '100%',
